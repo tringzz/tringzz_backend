@@ -1,25 +1,37 @@
-# main.py
-
 from tts.elevenlabs_tts import synthesize_speech
 from stt.whisper_stt import transcribe_audio
+from stt.mic_recorder import record_audio
 from memory.memory_store import MemoryStore
+from ai.response_engine import generate_response
 
 memory = MemoryStore()
-session_id = "test_user_1"  # Static for now
+session_id = "test_user_1"
 
-# 1. Synthesize speech
+# 1. Assistant speaks
 text = "Hi! How can I help you today?"
-audio_file = synthesize_speech(text)
-print(f"Speech synthesized and saved to: {audio_file}")
+synthesize_speech(text)
+print(f"🗣️ Assistant said: {text}")
 
-# 2. Transcribe audio back to text
-transcribed_text = transcribe_audio(audio_file)
-print(f"Transcribed text: {transcribed_text}")
+# 2. Record user response via mic
+user_audio_file = record_audio(duration=5)
+transcribed_text = transcribe_audio(user_audio_file)
+print(f"📝 User said: {transcribed_text}")
 
-# 3. Save to memory
-memory.save_message(session_id, role="assistant", message=text)
-memory.save_message(session_id, role="user", message=transcribed_text)
+# 3. Save both turns to memory
+memory.save_message(session_id, "assistant", text)
+memory.save_message(session_id, "user", transcribed_text)
 
-# 4. Retrieve history
+# 4. Get LLM response
 conversation = memory.get_conversation(session_id)
-print(f"\nConversation so far:\n{conversation}")
+ai_reply = generate_response(conversation)
+print(f"\n🤖 AI Reply: {ai_reply}")
+
+# 5. Speak the AI reply
+#synthesize_speech(ai_reply)
+short_reply = ai_reply[:250]  # Truncate to 250 characters
+synthesize_speech(short_reply)
+print("🔊 AI reply spoken (shortened).")
+
+
+# 6. Store in memory
+memory.save_message(session_id, "assistant", ai_reply)
